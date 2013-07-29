@@ -61,6 +61,26 @@ import org.slf4j.LoggerFactory;
 public class Forwarding extends ForwardingBase implements IFloodlightModule {
     protected static Logger log = LoggerFactory.getLogger(Forwarding.class);
 
+    private void L1DropFlow(IOFSwitch sw) {
+    	OFFlowMod flowMod = (OFFlowMod) floodlightProvider.getOFMessageFactory().getMessage(OFType.FLOW_MOD);
+    	flowMod.setMatch(new OFMatch());
+        flowMod.setCommand(OFFlowMod.OFPFC_ADD);
+        flowMod.setBufferId(-1);
+        flowMod.setIdleTimeout((short) 0);
+        flowMod.setHardTimeout((short) 0);
+        flowMod.setPriority((short) 0);
+        flowMod.setOutPort(OFPort.OFPP_NONE.getValue());
+        flowMod.setFlags((short) (1 << 0)); // OFPFF_SEND_FLOW_REM
+        flowMod.setLength((short) (OFFlowMod.MINIMUM_LENGTH));
+        
+        log.info("Sending FlodMod {} to sw {}", flowMod.toString(), sw.getStringId());
+        try {
+        	sw.write(flowMod, null);
+        } catch (IOException e) {
+            log.error("Failed to write {} to switch {}", new Object[]{ flowMod, sw }, e);
+        }
+    }
+    
     @Override
     @LogMessageDoc(level="ERROR",
                    message="Unexpected decision made for this packet-in={}",
@@ -71,7 +91,18 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
                                           FloodlightContext cntx) {
         Ethernet eth = IFloodlightProviderService.bcStore.get(cntx,
                                    IFloodlightProviderService.CONTEXT_PI_PAYLOAD);
-
+        log.info("Received packet in from {} ({})", sw.getStringId(), sw.getId());
+        
+        if ((sw.getId() & 0xffff000000000000L) == 0x1111000000000000L) {
+            if (log.isTraceEnabled()) {
+                log.trace("Skipping PacketIn={} from L1 switch...", pi);
+            }
+            // TODO: fix StaticFlowPusher. It is not pushing flow priority. 
+            // Simply ignoring this for now
+            //L1DropFlow(sw);
+            return Command.CONTINUE;
+        }
+        
         // If a decision has been made we obey it
         // otherwise we just forward
         if (decision != null) {
