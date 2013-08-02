@@ -403,12 +403,14 @@ public class StaticFlowEntryPusher
                             && oldFlowMod.getCookie() == newFlowMod.getCookie()
                             && oldFlowMod.getPriority() == newFlowMod.getPriority()){
                         newFlowMod.setCommand(OFFlowMod.OFPFC_MODIFY_STRICT);
+                        log.debug("Modifying pre-existing rule {} with {}", entry, newFlowMod.toString());
                     // if they don't match delete the old flow
                     } else{
                         oldFlowMod.setCommand(OFFlowMod.OFPFC_DELETE_STRICT);
                         if (dpidOldFlowMod.equals(dpid)) {
                             outQueue.add(oldFlowMod);
                         } else {
+                        	log.debug("Early deleting rule {}: {}", entry, oldFlowMod.toString());
                             writeOFMessageToSwitch(HexString.toLong(dpidOldFlowMod), oldFlowMod);
                         }
                     }
@@ -419,10 +421,12 @@ public class StaticFlowEntryPusher
                     outQueue.add(newFlowMod);
                     entry2dpid.put(entry, dpid);
                 } else {
+                	log.trace("No newFlowMod for {}: {}", entry, oldFlowMod.toString());
                     entriesFromStorage.get(dpid).remove(entry);
                     entry2dpid.remove(entry);
                 }
             }
+            
             writeOFMessagesToSwitch(HexString.toLong(dpid), outQueue);
         }
     }
@@ -492,7 +496,13 @@ public class StaticFlowEntryPusher
         if (ofswitch != null) {  // is the switch connected
             try {
                 if (log.isDebugEnabled()) {
-                    log.debug("Sending {} new entries to {}", messages.size(), dpid);
+                    log.debug("Sending {} new entries to {}", messages.size(), HexString.toHexString(dpid));
+	                log.debug("Messages:");
+	                Integer i = 1;
+	                for (OFMessage ofm : messages) {
+	                	log.debug("  {}: {}", i.toString(), ofm.toString());
+	                	i++;
+	                }
                 }
                 ofswitch.write(messages, null);
                 ofswitch.flush();
@@ -517,8 +527,9 @@ public class StaticFlowEntryPusher
         if (ofswitch != null) {  // is the switch connected
             try {
                 if (log.isDebugEnabled()) {
-                    log.debug("Sending 1 new entries to {}", HexString.toHexString(dpid));
+                    log.debug("Sending a single new entries to {}", HexString.toHexString(dpid));
                 }
+                log.debug("Message: {}", message.toString());
                 ofswitch.write(message, null);
                 ofswitch.flush();
             } catch (IOException e) {
