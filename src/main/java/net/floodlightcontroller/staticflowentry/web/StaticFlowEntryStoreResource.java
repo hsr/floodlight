@@ -20,7 +20,6 @@ package net.floodlightcontroller.staticflowentry.web;
 import java.io.IOException;
 import java.util.Map;
 
-import org.restlet.resource.Delete;
 import org.restlet.resource.Post;
 import org.restlet.resource.ServerResource;
 import org.slf4j.Logger;
@@ -39,8 +38,8 @@ import net.floodlightcontroller.storage.IStorageSourceService;
  *
  */
 @LogMessageCategory("Static Flow Pusher")
-public class StaticFlowEntryPusherResource extends ServerResource {
-    protected static Logger log = LoggerFactory.getLogger(StaticFlowEntryPusherResource.class);
+public class StaticFlowEntryStoreResource extends ServerResource {
+    protected static Logger log = LoggerFactory.getLogger(StaticFlowEntryStoreResource.class);
 
     /**
      * Checks to see if the user matches IP information without
@@ -109,32 +108,5 @@ public class StaticFlowEntryPusherResource extends ServerResource {
             log.error("Error parsing push flow mod request: " + fmJson, e);
             return "{\"status\" : \"Error! Could not parse flod mod, see log for details.\"}";
         }
-    }
-
-    @Delete
-    @LogMessageDoc(level="ERROR",
-        message="Error deleting flow mod request: {request}",
-        explanation="An invalid delete request was sent to static flow pusher",
-        recommendation="Fix the format of the static flow mod request")
-    public String del(String fmJson) {
-        IStorageSourceService storageSource =
-                (IStorageSourceService)getContext().getAttributes().
-                    get(IStorageSourceService.class.getCanonicalName());
-        String fmName = null;
-        if (fmJson == null) {
-            return "{\"status\" : \"Error! No data posted.\"}";
-        }
-        try {
-            fmName = StaticFlowEntries.getEntryNameFromJson(fmJson);
-            if (fmName == null) {
-                return "{\"status\" : \"Error deleting entry, no name provided\"}";
-            }
-        } catch (IOException e) {
-            log.error("Error deleting flow mod request: " + fmJson, e);
-            return "{\"status\" : \"Error deleting entry, see log for details\"}";
-        }
-
-        storageSource.deleteRowAsync(StaticFlowEntryPusher.TABLE_NAME, fmName);
-        return "{\"status\" : \"Entry " + fmName + " deleted\"}";
     }
 }
