@@ -29,7 +29,7 @@ public class StaticFlowEntryWebRoutable implements RestletRoutable {
     @Override
     public Restlet getRestlet(Context context) {
         Router router = new Router(context);
-        router.attach("/json", StaticFlowEntryStoreResource.class);
+        router.attach("/json", StaticFlowEntryPusherResource.class);
         router.attach("/json/store", StaticFlowEntryStoreResource.class);
         router.attach("/json/delete", StaticFlowEntryDeleteResource.class);
         router.attach("/clear/{switch}/json", ClearStaticFlowEntriesResource.class);
